@@ -2,7 +2,7 @@
   (:use [midje.sweet]))
 
 
-(defn parse-different-delimiters
+(defn split-different-delimiters
   [terms]
   (when-first [matcher (re-seq #"^(//(.)\n).*$" terms)]
     (vector
@@ -11,14 +11,18 @@
 
 (defn parse-terms
   [terms]
-  (let [s-terms (parse-different-delimiters terms)]
+  (let [s-terms (split-different-delimiters terms)]
     (cond
      (not (empty? s-terms)) s-terms
      :else (vector terms "[,\n]"))))
 
+
 (defn parse-numbers
   [numbers sep]
-  (map #(Integer/parseInt %) (.split numbers sep)))
+  (let [numbers (map #(Integer/parseInt %) (.split numbers sep))]
+    (if (some neg? numbers)
+      (throw (IllegalArgumentException. "Negatives not allowed"))
+      numbers)))
 
 (defn add
   [terms]
@@ -46,7 +50,6 @@
 (fact "When following input is not ok"
   (add "1\n,") => 1)
 
-
 (fact "Get the separator from string"
   (parse-terms "//;\n1;2") => ["1;2" ";"])
 
@@ -56,3 +59,7 @@
 
 (fact "Support different delimiters"
   (add "//;\n1;2;3") => 6)
+
+
+(fact "Callind add with a negative number will throw an exception 'negatives not allowed'"
+  (add "-1,2") => (throws IllegalArgumentException "Negatives not allowed"))
