@@ -20,8 +20,9 @@
 (defn parse-numbers
   [numbers sep]
   (let [numbers (map #(Integer/parseInt %) (.split numbers sep))]
-    (if (some neg? numbers)
-      (throw (IllegalArgumentException. "Negatives not allowed"))
+    (if-let [negatives (filter neg? numbers)]
+      (throw (IllegalArgumentException.
+              (str "Negatives not allowed " (apply str negatives))))
       numbers)))
 
 (defn add
@@ -62,4 +63,4 @@
 
 
 (fact "Callind add with a negative number will throw an exception 'negatives not allowed'"
-  (add "-1,2") => (throws IllegalArgumentException "Negatives not allowed"))
+  (add "-1,2") => (throws IllegalArgumentException "Negatives not allowed -1"))
