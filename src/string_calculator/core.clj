@@ -69,9 +69,6 @@
   (add "-1,-2,3,-4,5") => (throws IllegalArgumentException "Negatives not allowed -1 -2 -4"))
 
 
-     ;.;. Actual: 0
-   ;.;. Expected: 1
-;.;. FAIL "Numbers bigger than 1000 should be ignored, so adding 2 + 1001  = 2" at (form-init7124269209835544508.clj:5)
 (fact "Numbers bigger than 1000 should be ignored, so adding 2 + 1001  = 2"
   (add "2,1001") => 2
   (add "1001,1002") => 0
