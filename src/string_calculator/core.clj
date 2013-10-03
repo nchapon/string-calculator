@@ -2,9 +2,27 @@
   (:use [midje.sweet]))
 
 
+(defn escape-special-characters
+  [s]
+  (clojure.string/escape s {\* "\\*"}))
+
+(defn split-different-delimiters
+  [terms]
+  (when-first [matcher (re-seq #"^(//(.+)\n).*$" terms)]
+    (vector
+     (subs terms (count (second matcher)))
+     (escape-special-characters (last matcher)))))
+
+(defn parse-terms
+  [terms]
+  (let [s-terms (split-different-delimiters terms)]
+    (cond
+     (not (empty? s-terms)) s-terms
+     :else (vector terms "[,\n]"))))
+
 (defn parse-numbers
-  [numbers]
-  (let [numbers (map #(Integer/parseInt %) (re-seq #"-*\d+" numbers))]
+  [numbers sep]
+  (let [numbers (map #(Integer/parseInt %) (.split numbers sep))]
     (if-let [negatives (seq (filter neg? numbers))] ;; filter does not returns nil
       (throw (IllegalArgumentException.
               (str "Negatives not allowed " (apply str
@@ -14,8 +32,9 @@
 (defn add
   [terms]
   (cond (not (empty? terms))
-        (->> (parse-numbers terms)
-             (reduce +))
+    (let [[numbers sep] (parse-terms terms)]
+      (->> (parse-numbers numbers sep)
+            (reduce +)))
     :else 0))
 
 (fact "For empty string returns 0"
@@ -36,6 +55,13 @@
 (fact "When following input is not ok"
   (add "1\n,") => 1)
 
+(fact "Parse terms in a vector [numbers sep]"
+  (parse-terms "//;\n1;2") => ["1;2" ";"]
+  (parse-terms "//***\n1***2") => ["1***2" "\\*\\*\\*"])
+
+(fact "When no line separator"
+  (parse-terms "1,2,3") => ["1,2,3" "[,\n]"])
+
 (fact "Support different delimiters"
   (add "//;\n1;2;3") => 6)
 
@@ -54,3 +80,7 @@
 
 (fact "Delimiters can be of any length with the following format"
   (add "//***\n1***2***3") => 6)
+
+(fact "Escape special characters if necessary"
+  (escape-special-characters ",") => ","
+  (escape-special-characters "*") => "\\*")
