@@ -16,6 +16,7 @@
      (not (empty? s-terms)) s-terms
      :else (vector terms "[,\n]"))))
 
+
 (defn parse-numbers
   [numbers sep]
   (let [numbers (map #(Integer/parseInt %) (.split numbers sep))]
@@ -23,7 +24,7 @@
       (throw (IllegalArgumentException.
               (str "Negatives not allowed " (apply str
                                                    (interpose " " negatives)))))
-      numbers)))
+      (filter #(<= % 1000) numbers))))
 
 (defn add
   [terms]
@@ -42,7 +43,6 @@
 (fact "Add two numbers"
   (add "1,2") => 3)
 
-;.;. Excellence is not an act but a habit. -- Aristotle
 (fact "Add an unknow amount of numbers"
   (add "1,2,3") => 6)
 
@@ -67,3 +67,12 @@
     If there are multiple negatives, show all of them in the exception message."
   (add "-1,2") => (throws IllegalArgumentException "Negatives not allowed -1")
   (add "-1,-2,3,-4,5") => (throws IllegalArgumentException "Negatives not allowed -1 -2 -4"))
+
+
+     ;.;. Actual: 0
+   ;.;. Expected: 1
+;.;. FAIL "Numbers bigger than 1000 should be ignored, so adding 2 + 1001  = 2" at (form-init7124269209835544508.clj:5)
+(fact "Numbers bigger than 1000 should be ignored, so adding 2 + 1001  = 2"
+  (add "2,1001") => 2
+  (add "1001,1002") => 0
+  (add "1001") => 0)
