@@ -2,24 +2,9 @@
   (:use [midje.sweet]))
 
 
-(defn split-different-delimiters
-  [terms]
-  (when-first [matcher (re-seq #"^(//(.)\n).*$" terms)]
-    (vector
-     (subs terms (count (second matcher)))
-     (last matcher))))
-
-(defn parse-terms
-  [terms]
-  (let [s-terms (split-different-delimiters terms)]
-    (cond
-     (not (empty? s-terms)) s-terms
-     :else (vector terms "[,\n]"))))
-
-
 (defn parse-numbers
-  [numbers sep]
-  (let [numbers (map #(Integer/parseInt %) (.split numbers sep))]
+  [numbers]
+  (let [numbers (map #(Integer/parseInt %) (re-seq #"-*\d+" numbers))]
     (if-let [negatives (seq (filter neg? numbers))] ;; filter does not returns nil
       (throw (IllegalArgumentException.
               (str "Negatives not allowed " (apply str
@@ -29,9 +14,8 @@
 (defn add
   [terms]
   (cond (not (empty? terms))
-    (let [[numbers sep] (parse-terms terms)]
-      (->> (parse-numbers numbers sep)
-            (reduce +)))
+        (->> (parse-numbers terms)
+             (reduce +))
     :else 0))
 
 (fact "For empty string returns 0"
@@ -52,12 +36,6 @@
 (fact "When following input is not ok"
   (add "1\n,") => 1)
 
-(fact "Get the separator from string"
-  (parse-terms "//;\n1;2") => ["1;2" ";"])
-
-(fact "When no line separator"
-  (parse-terms "1,2,3") => ["1,2,3" "[,\n]"])
-
 (fact "Support different delimiters"
   (add "//;\n1;2;3") => 6)
 
@@ -73,3 +51,6 @@
   (add "2,1001") => 2
   (add "1001,1002") => 0
   (add "1001") => 0)
+
+(fact "Delimiters can be of any length with the following format"
+  (add "//***\n1***2***3") => 6)
