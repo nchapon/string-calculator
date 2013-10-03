@@ -2,9 +2,19 @@
   (:use [midje.sweet]))
 
 
+
+
+(defn delimiter->regexp [s]
+  (let [matcher (re-seq #"(^\[(.*)\]$)" s)]
+   (cond
+    (not (empty? matcher)) (last (first matcher))
+    :else s)))
+
 (defn escape-special-characters
   [s]
-  (clojure.string/escape s {\* "\\*"}))
+  (clojure.string/escape
+   (delimiter->regexp s)
+   {\* "\\*"}))
 
 (defn split-different-delimiters
   [terms]
@@ -55,9 +65,13 @@
 (fact "When following input is not ok"
   (add "1\n,") => 1)
 
+(fact "Escape special characters if necessary"
+  (escape-special-characters ",") => ","
+  (escape-special-characters "*") => "\\*")
+
 (fact "Parse terms in a vector [numbers sep]"
   (parse-terms "//;\n1;2") => ["1;2" ";"]
-  (parse-terms "//***\n1***2") => ["1***2" "\\*\\*\\*"])
+  (parse-terms "//[***]\n1***2") => ["1***2" "\\*\\*\\*"])
 
 (fact "When no line separator"
   (parse-terms "1,2,3") => ["1,2,3" "[,\n]"])
@@ -72,15 +86,17 @@
   (add "-1,2") => (throws IllegalArgumentException "Negatives not allowed -1")
   (add "-1,-2,3,-4,5") => (throws IllegalArgumentException "Negatives not allowed -1 -2 -4"))
 
-
 (fact "Numbers bigger than 1000 should be ignored, so adding 2 + 1001  = 2"
   (add "2,1001") => 2
   (add "1001,1002") => 0
   (add "1001") => 0)
 
 (fact "Delimiters can be of any length with the following format"
-  (add "//***\n1***2***3") => 6)
+  (add "//[***]\n1***2***3") => 6)
 
-(fact "Escape special characters if necessary"
-  (escape-special-characters ",") => ","
-  (escape-special-characters "*") => "\\*")
+(future-fact ""
+  (add "//[*][%]\n1*2%3") => 6)
+
+(fact "Sanitize delimiter"
+  (delimiter->regexp ",") => ","
+  (delimiter->regexp "[***]") => "***")
