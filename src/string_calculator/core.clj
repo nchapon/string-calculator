@@ -80,20 +80,11 @@
 (fact "When following input is not ok"
   (add "1\n,") => 1)
 
-(fact "Escape special characters if necessary"
-  (escape-special-characters ",") => ","
-  (escape-special-characters "*") => "\\*")
-
-(fact "Parse terms in a vector [numbers [sep1 sep2]]"
-  (parse-terms "1,2,3") => ["1,2,3" ["," "\n"]]
-  (parse-terms "//;\n1;2") => ["1;2" [";"]]
-  (parse-terms "//[***]\n1***2") => ["1***2" ["***"]])
-
 (fact "Support different delimiters"
   (add "//;\n1;2;3") => 6)
 
 (fact
-  "Callind add with a negative number will throw an exception
+  "Calling add with a negative number will throw an exception
    'negatives not allowed' - and the negative that was passed.
     If there are multiple negatives, show all of them in the exception message."
   (add "-1,2") => (throws IllegalArgumentException "Negatives not allowed -1")
@@ -110,11 +101,17 @@
 (fact "Allow multiple delimiters like this:  '//[delim1][delim2]\n'"
    (add "//[*][%]\n1*2%3") => 6)
 
-
-;.;. Good code is its own best documentation. -- Steve McConnell
 (fact "Make sure we can handle multiple delimiters with length longer than one char"
   (add "//[*][%%]\n1*2%%3") => 6)
 
+(fact "Escape special characters if necessary"
+  (escape-special-characters ",") => ","
+  (escape-special-characters "*") => "\\*")
+
+(fact "Parse terms in a vector [numbers [sep1 sep2]]"
+  (parse-terms "1,2,3") => ["1,2,3" ["," "\n"]]
+  (parse-terms "//;\n1;2") => ["1;2" [";"]]
+  (parse-terms "//[***]\n1***2") => ["1***2" ["***"]])
 
 (fact "Read delimiters in a vector"
   (read-delimiters ",") => [","]
