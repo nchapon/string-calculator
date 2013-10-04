@@ -1,5 +1,6 @@
 (ns string-calculator.core
-  (:use [midje.sweet]))
+  (:use [midje.sweet]
+        [clojure.string :only [join escape]]))
 
 (defn parse-multiple-delimiters [s]
   (if-let [multiple-delimiters (vec (.split s "\\]\\["))]
@@ -15,9 +16,9 @@
 
 (defn escape-special-characters
   [s]
-  (clojure.string/escape
+  (escape
    s
-   {\* "\\*"})) ;; need to escape others characters
+   {\* "\\*"})) ;; need to escape more characters
 
 (defn split-different-delimiters
   [terms]
@@ -33,14 +34,17 @@
      (not (empty? s-terms)) s-terms
      :else (vector terms (vector "," "\n")))))
 
-(defn parse-numbers
+(defn format-exception
+  [negatives]
+  (str "Negatives not allowed " (join  " " negatives)))
+
+(defn to-numbers
   [numbers sep]
-  (let [numbers (map #(Integer/parseInt %) (filter not-empty (.split numbers sep)))]
-    (if-let [negatives (seq (filter neg? numbers))] ;; filter does not returns nil
-      (throw (IllegalArgumentException.
-              (str "Negatives not allowed " (apply str
-                                                   (interpose " " negatives)))))
-      (filter #(<= % 1000) numbers))))
+  (let [numbers (map #(Integer/parseInt %) (filter not-empty (.split numbers sep)))
+        negatives (seq (filter neg? numbers))]
+    (if (not-empty negatives)
+      (throw (IllegalArgumentException. (format-exception negatives)))
+      numbers)))
 
 
 (defn delimiters->regexp
@@ -58,7 +62,7 @@
   (cond (not (empty? terms))
     (let [[numbers delimiters] (parse-terms terms)
           re (delimiters->regexp delimiters)]
-      (->> (parse-numbers numbers re)
+      (->> (filter #(<= % 1000) (to-numbers numbers re))
             (reduce +)))
     :else 0))
 
