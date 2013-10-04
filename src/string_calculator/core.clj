@@ -1,11 +1,6 @@
 (ns string-calculator.core
   (:use [midje.sweet]))
 
-
-
-
-
-
 (defn parse-multiple-delimiters [s]
   (if-let [multiple-delimiters (vec (.split s "\\]\\["))]
     multiple-delimiters
@@ -40,13 +35,12 @@
 
 (defn parse-numbers
   [numbers sep]
-  (let [numbers (map #(Integer/parseInt %) (.split numbers sep))]
+  (let [numbers (map #(Integer/parseInt %) (filter not-empty (.split numbers sep)))]
     (if-let [negatives (seq (filter neg? numbers))] ;; filter does not returns nil
       (throw (IllegalArgumentException.
               (str "Negatives not allowed " (apply str
                                                    (interpose " " negatives)))))
       (filter #(<= % 1000) numbers))))
-
 
 
 (defn delimiters->regexp
@@ -59,6 +53,7 @@
 
 
 (defn add
+  "Add numbers from terms"
   [terms]
   (cond (not (empty? terms))
     (let [[numbers delimiters] (parse-terms terms)
@@ -113,9 +108,16 @@
   (add "//[***]\n1***2***3") => 6)
 
 (fact "Allow multiple delimiters like this:  '//[delim1][delim2]\n'"
-  (add "//[*][%]\n1*2%3") => 6)
+   (add "//[*][%]\n1*2%3") => 6)
+
+
+;.;. Good code is its own best documentation. -- Steve McConnell
+(fact "Make sure we can handle multiple delimiters with length longer than one char"
+  (add "//[*][%%]\n1*2%%3") => 6)
+
 
 (fact "Read delimiters in a vector"
   (read-delimiters ",") => [","]
   (read-delimiters "[***]") => ["***"]
-  (read-delimiters "[x][y]") => ["x" "y"])
+  (read-delimiters "[x][y]") => ["x" "y"]
+  (read-delimiters "[x][yy]") => ["x" "yy"])
