@@ -4,31 +4,39 @@
 
 
 
-(defn delimiter->regexp [s]
+
+
+(defn parse-multiple-delimiters [s]
+  (if-let [multiple-delimiters (vec (.split s "\\]\\["))]
+    multiple-delimiters
+    s))
+
+(defn read-delimiters [s]
+  "Returns a vector containing one or many delimiters"
   (let [matcher (re-seq #"(^\[(.*)\]$)" s)]
-   (cond
-    (not (empty? matcher)) (last (first matcher))
-    :else s)))
+    (cond
+     (not (empty? matcher)) (parse-multiple-delimiters (last (first matcher)))
+     :else [s])))
 
 (defn escape-special-characters
   [s]
   (clojure.string/escape
-   (delimiter->regexp s)
-   {\* "\\*"}))
+   s
+   {\* "\\*"})) ;; need to escape others characters
 
 (defn split-different-delimiters
   [terms]
   (when-first [matcher (re-seq #"^(//(.+)\n).*$" terms)]
     (vector
      (subs terms (count (second matcher)))
-     (escape-special-characters (last matcher)))))
+     (read-delimiters (last matcher)))))
 
 (defn parse-terms
   [terms]
   (let [s-terms (split-different-delimiters terms)]
     (cond
      (not (empty? s-terms)) s-terms
-     :else (vector terms "[,\n]"))))
+     :else (vector terms (vector "," "\n")))))
 
 (defn parse-numbers
   [numbers sep]
@@ -39,11 +47,23 @@
                                                    (interpose " " negatives)))))
       (filter #(<= % 1000) numbers))))
 
+
+
+(defn delimiters->regexp
+  [delimiters]
+  (if (> (count delimiters) 1)
+    (str "["
+         (apply str (map #(escape-special-characters %) delimiters))
+         "]")
+    (apply str (map #(escape-special-characters %) delimiters))))
+
+
 (defn add
   [terms]
   (cond (not (empty? terms))
-    (let [[numbers sep] (parse-terms terms)]
-      (->> (parse-numbers numbers sep)
+    (let [[numbers delimiters] (parse-terms terms)
+          re (delimiters->regexp delimiters)]
+      (->> (parse-numbers numbers re)
             (reduce +)))
     :else 0))
 
@@ -69,12 +89,10 @@
   (escape-special-characters ",") => ","
   (escape-special-characters "*") => "\\*")
 
-(fact "Parse terms in a vector [numbers sep]"
-  (parse-terms "//;\n1;2") => ["1;2" ";"]
-  (parse-terms "//[***]\n1***2") => ["1***2" "\\*\\*\\*"])
-
-(fact "When no line separator"
-  (parse-terms "1,2,3") => ["1,2,3" "[,\n]"])
+(fact "Parse terms in a vector [numbers [sep1 sep2]]"
+  (parse-terms "1,2,3") => ["1,2,3" ["," "\n"]]
+  (parse-terms "//;\n1;2") => ["1;2" [";"]]
+  (parse-terms "//[***]\n1***2") => ["1***2" ["***"]])
 
 (fact "Support different delimiters"
   (add "//;\n1;2;3") => 6)
@@ -94,9 +112,10 @@
 (fact "Delimiters can be of any length with the following format"
   (add "//[***]\n1***2***3") => 6)
 
-(future-fact ""
+(fact "Allow multiple delimiters like this:  '//[delim1][delim2]\n'"
   (add "//[*][%]\n1*2%3") => 6)
 
-(fact "Sanitize delimiter"
-  (delimiter->regexp ",") => ","
-  (delimiter->regexp "[***]") => "***")
+(fact "Read delimiters in a vector"
+  (read-delimiters ",") => [","]
+  (read-delimiters "[***]") => ["***"]
+  (read-delimiters "[x][y]") => ["x" "y"])
