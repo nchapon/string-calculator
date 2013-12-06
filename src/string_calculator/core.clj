@@ -122,3 +122,35 @@
   (read-delimiters "[***]") => ["***"]
   (read-delimiters "[x][y]") => ["x" "y"]
   (read-delimiters "[x][yy]") => ["x" "yy"])
+
+
+(defn multiple-delimiters
+  "Parse extra delimiters"
+  [s]
+  (when-first [matcher (re-seq #"^//(.+)\\n|\[(.*?)\]\\n" s)]
+    (second matcher)))
+
+
+
+
+(fact
+  (multiple-delimiters "1,2,3") => nil
+  (multiple-delimiters "//;\\n1;2;3") => ";"
+  (multiple-delimiters "//[***]\\n1***2***3") => "[***]"
+  (multiple-delimiters "//[***][%]\\n1***2%3") => "[***][%]")
+
+
+(comment
+  (when-let [matchers (re-seq #"((^//(\[(.*?)\])+)\n).*$" "//[***][%]\n1***2%3")]
+    matchers)
+
+  (when-let [matchers (re-seq #"(\[(.*)\])" "[aa][b]")]
+    (matchers))
+  (re-seq #"(\[(.*?)\])" "[**][%]")
+  (re-seq #"(\[(.*?)\])" "//[**][%]\\n1**2%3")
+  (re-seq #"^//(.+)\n\[(\1)\]" "//[**][%]\n1**2%3")
+  (re-seq #"^//(.+)\\n|\[(.*?)\]\\n" "//;\\n1;2;3")
+  (re-seq #"^//(.+)\\n|\[(.*?)\]\\n" "//[**][%]\\n1**2%3")
+
+
+)
